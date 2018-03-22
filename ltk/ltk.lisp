@@ -138,6 +138,9 @@ toplevel             x
            #:*ltk-debug*
            #:*tk*
            #:*wish*
+           #+:sbcl
+           #:*wish-mutex*
+           #-:sbcl
            #:wish-stream
            #:wish-variable
            #:wish-variables
@@ -837,6 +840,15 @@ fconfigure stdout -encoding utf-8
     (throw 'exit-with-remote-ltk nil))
   (throw *wish* nil))
 
+#+:sbcl
+(defparameter *wish-mutex* (sb-thread:make-mutex :name "wish-mutex"))
+(defun send-wish (text)
+  (sb-thread:with-mutex (*wish-mutex*)
+   (push text (wish-output-buffer *wish*))
+   (unless *buffer-for-atomic-output*
+     (flush-wish))))
+
+#-:sbcl
 (defun send-wish (text)
   (push text (wish-output-buffer *wish*))
   (unless *buffer-for-atomic-output*
@@ -922,7 +934,6 @@ fconfigure stdout -encoding utf-8
     (finish-output))
   (ignore-errors (close stream))
   (exit-wish))
-
 (defun format-wish (control &rest args)
   "format 'args using 'control as control string to wish"
   (send-wish (apply #'format nil control args)))
@@ -4191,21 +4202,20 @@ tk input to terminate"
 
 (defun mainloop (&key serve-event)
   (let ((reentrant? (member *wish* *inside-mainloop*))
-	(*inside-mainloop* (adjoin *wish* *inside-mainloop*)))
+        (*inside-mainloop* (adjoin *wish* *inside-mainloop*)))
     (cond
       (serve-event (install-input-handler))
       ((wish-input-handler *wish*)
        (let ((*exit-mainloop* nil)
              (*break-mainloop* nil))
          (loop until (or *break-mainloop* *exit-mainloop*)
-               do (serve-event))))
+               do (serve-event) )))
       (t (let ((*exit-mainloop* nil)
                (*break-mainloop* nil))
-	   (if reentrant?
-	       (loop while (main-iteration :reentrant? t))
-	       (loop while (with-ltk-handlers ()
-			     (main-iteration)))))))))
-
+           (if reentrant?
+             (loop while (main-iteration :reentrant? t))
+             (loop while (with-ltk-handlers ()
+                           (main-iteration)))))))))
 ;;; Event server
 
 #-(or sbcl cmu)
