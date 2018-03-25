@@ -841,12 +841,13 @@ fconfigure stdout -encoding utf-8
   (throw *wish* nil))
 
 #+:sbcl
-(defparameter *wish-mutex* (sb-thread:make-mutex :name "wish-mutex"))
-(defun send-wish (text)
-  (sb-thread:with-mutex (*wish-mutex*)
-   (push text (wish-output-buffer *wish*))
-   (unless *buffer-for-atomic-output*
-     (flush-wish))))
+(progn
+  (defparameter *wish-mutex* (sb-thread:make-mutex :name "wish-mutex"))
+  (defun send-wish (text)
+    (sb-thread:with-mutex (*wish-mutex*)
+      (push text (wish-output-buffer *wish*))
+      (unless *buffer-for-atomic-output*
+        (flush-wish)))))
 
 #-:sbcl
 (defun send-wish (text)
