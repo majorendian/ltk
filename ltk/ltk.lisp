@@ -2901,19 +2901,12 @@ set y [winfo y ~a]
 
 (defgeneric treeview-get-selection (w))
 (defmethod treeview-get-selection ((tv treeview))
-  (format-wish "senddatastrings [~a selection]" (widget-path tv))
-  (let ((names (read-data))
-        (items (items tv)))
-    (mapcar (lambda (name)
-              (find name items :key #'name :test #'equal))
-            names)))
+  (format-wish "senddatastring [~a selection]" (widget-path tv))
+  (read-data))
 
 (defgeneric treeview-set-selection (w items))
 (defmethod treeview-set-selection ((tv treeview) items)
   (format-wish "~a selection set {~{~a ~}}" (widget-path tv) (mapcar #'name items)))
-
-
-
 
 (defclass scrolled-treeview (frame)
   ((treeview :accessor treeview)
